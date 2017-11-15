@@ -1,0 +1,21 @@
+<h1>Timetable</h1>
+<form>
+  <link rel="stylesheet" href="../static/css/tableStyle.css"> 
+  <select name="tablesBox">            
+    {% for i in tables %}
+      <option {% if i == selectedTable %} selected {% endif %}>{{i}}</option>
+    {% endfor %}
+  </select>
+  <select name="columnsBox">            
+    {% for i in columns %}
+      <option {% if i == selectedColumn %} selected {% endif %}>{{i}}</option>
+    {% endfor %}
+  </select>
+  <input name = 'searchInput'>
+  <button>Submit</button>
+  <table>
+  {% for i in tableElements %}
+    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}</tr>
+  {% endfor %}
+  </table>  
+</form>	
