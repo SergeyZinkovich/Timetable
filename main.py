@@ -1,6 +1,8 @@
 from builtins import len
 
 import fdb
+import tablesMetadata
+import queryConstractor
 from flask import Flask
 from flask import request
 from flask import render_template
@@ -12,7 +14,7 @@ def getTables(cur):
     WHERE RDB$SYSTEM_FLAG = 0 AND RDB$RELATION_TYPE = 0"""
     cur.execute(sqlRequest)
     tables = cur.fetchall()
-    return [str(tables[i])[2:-3].strip() for i in range(len(tables))]
+    return [str(t[0]).strip() for t in tables]
 
 def getColums(cur, tableName):
     sqlRequest = """select rdb$field_name 
@@ -20,31 +22,34 @@ def getColums(cur, tableName):
     where rdb$relation_name= \'""" + tableName + "\'"
     cur.execute(sqlRequest)
     columns = cur.fetchall()
-    return [str(columns[i])[2:-3].strip() for i in range(len(columns))]
+    return [str(c[0]).strip() for c in columns]
 
 @app.route("/")
 def mainPage():
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF8')
     cur = dataBase.cursor()
     tables = getTables(cur)
+
     tableName = request.args.get('tablesBox', '')
-    if tableName == '':
+    if (tableName == '') or not (tableName in tables):
         tableName = tables[0]
-    columns = getColums(cur, tableName)
+    metaClass = getattr(tablesMetadata, tableName.lower())
+    meta = metaClass.getMeta(metaClass)
+    #columns = getColums(cur, tableName)
+    columns = [i.name for i in meta]
     columnName = request.args.get('columnsBox', '')
-    if columnName == '':
+    if (columnName == '') or not (columnName in columns):
         columnName = columns[0]
     searchName = request.args.get('searchInput', '')
 
-    sqlRequest = "select * from " + tableName
-    if len(searchName) != 0:
-        sqlRequest += " where " + columnName + " like \'" + searchName + "\'"
-    cur.execute(sqlRequest)
+    queryBuilder = queryConstractor.queryBuilder(tableName, columnName, searchName, meta)
+    cur.execute(queryBuilder.query, (searchName, ))
     sqlAns = cur.fetchall()
 
-    tableElements = [[] for i in range(len(sqlAns))]
+    tableElements = [[] for i in range(len(sqlAns) + 1)]
+    tableElements[0] = columns
     for i in range(len(sqlAns)):
-        tableElements[i] = str(sqlAns[i])[1:-1].split(',')
+        tableElements[i + 1] = [j for j in sqlAns[i]]
     return render_template("page.html", tables = tables, columns = columns, selectedTable = tableName,
                            selectedColumn = columnName, tableElements = tableElements)
 

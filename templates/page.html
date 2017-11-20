@@ -13,9 +13,13 @@
   </select>
   <input name = 'searchInput'>
   <button>Submit</button>
+  <h1>{{selectedTable}}</h1>
   <table>
+    <tr>{% for i in tableElements[0] %}<th>{{i}}</th>{% endfor %}</tr>
   {% for i in tableElements %}
+  {% if i != tableElements[0] %}
     <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}</tr>
+    {% endif %}
   {% endfor %}
   </table>  
 </form>	
