@@ -1,25 +1,72 @@
 <h1>Timetable</h1>
 <form>
   <link rel="stylesheet" href="../static/css/tableStyle.css"> 
-  <select name="tablesBox">            
+  <script src="../static/js/jquery-3.2.1.min.js"></script>
+  Выбор таблицы
+  <select name="tablesBox">
     {% for i in tables %}
       <option {% if i == selectedTable %} selected {% endif %}>{{i}}</option>
     {% endfor %}
   </select>
-  <select name="columnsBox">            
-    {% for i in columns %}
-      <option {% if i == selectedColumn %} selected {% endif %}>{{i}}</option>
+  {% block functions %}
+  <script id="filterSource" type="text/html">
+    <select name="columnsBox">
+      {% for j in columns %}
+        <option {% if j == selectedColumn[i] %} selected {% endif %}>{{j}}</option>
+      {% endfor %}
+    </select>
+    <select name="conditionsBox">
+    {% for j in conditions%}
+      <option {% if j == selectedConditions[i] %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+    </select>
+    <input name = 'searchInput' value= {{searchName[i]}}>
+    <br>
+  </script>
+  <script>
+    function addFilter(){
+      var filter = document.getElementById('filterSource').innerHTML;
+      $("#pConditions").append(filter);
+    }
+  </script>
+  {% endblock %}
+  <p id = "pConditions"></p>
+  {% for i in range(selectedColumn|length) %}
+  <select name="columnsBox">
+    {% for j in columns %}
+      <option {% if j == selectedColumn[i] %} selected {% endif %}>{{j}}</option>
     {% endfor %}
   </select>
-  <input name = 'searchInput'>
-  <button>Submit</button>
-  <h1>{{selectedTable}}</h1>
-  <table>
-    <tr>{% for i in tableElements[0] %}<th>{{i}}</th>{% endfor %}</tr>
-  {% for i in tableElements %}
-  {% if i != tableElements[0] %}
-    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}</tr>
-    {% endif %}
+  <select name="conditionsBox">
+    {% for j in conditions %}
+      <option {% if j == selectedConditions[i] %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+  </select>
+  <input name = 'searchInput' value={{searchName[i]}}>
+  <br>
   {% endfor %}
-  </table>  
+  <button type="button" onclick="addFilter()">Add Condition</button>
+  <button>Search</button>
+  
+  <h1>{{selectedTable}}</h1>
+  Элементов на странице
+  <select name = "elementsInPageBox">
+    {% for j in elementsInPageNumbers %}
+      <option {% if j == elementsInPage %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+  </select>
+  <select name = "sortOrderBox">
+    {% for i in columns %}
+      <option {% if i == sortOrder %} selected {% endif %}>{{i}}</option>
+    {% endfor %}
+  </select>
+  <table>
+    <tr>{% for i in columnsRealNames %}<th>{{i}}</th>{% endfor %}</tr>
+  {% for i in tableElements %}
+    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}</tr>
+  {% endfor %}
+  </table>
+  {% for i in range(pagesCount) %}
+  <button><a href = {{ modifyUrl(page = i) }}>{{i + 1}}</a></button>
+  {% endfor %}
 </form>	

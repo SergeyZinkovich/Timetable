@@ -6,6 +6,7 @@ import queryConstractor
 from flask import Flask
 from flask import request
 from flask import render_template
+from werkzeug.urls import url_encode
 app = Flask(__name__)
 
 def getTables(cur):
@@ -16,42 +17,80 @@ def getTables(cur):
     tables = cur.fetchall()
     return [str(t[0]).strip() for t in tables]
 
-def getColums(cur, tableName):
-    sqlRequest = """select rdb$field_name 
-    from rdb$relation_fields
-    where rdb$relation_name= \'""" + tableName + "\'"
-    cur.execute(sqlRequest)
-    columns = cur.fetchall()
-    return [str(c[0]).strip() for c in columns]
+def modifyUrl(**newValue):
+    args = request.args.copy()
+
+    for key, value in newValue.items():
+        args[key] = value
+
+    return '{}?{}'.format(request.path, url_encode(args))
+
+def getConditionList():
+    conditionList = ['LIKE', '>', '<', '>=', '<=', 'IN']
+    return conditionList
+
+def getElementsInPageNumbers():
+    elementsInPageNumbers = ['10', '25', '50']
+    return elementsInPageNumbers
 
 @app.route("/")
 def mainPage():
+    global modifyUrl
+    app.add_template_global(modifyUrl)
+    selectedPage = int(request.args.get('page', 0))
+
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF8')
     cur = dataBase.cursor()
+
     tables = getTables(cur)
+    selectedTable = request.args.get('tablesBox', '')
+    if (selectedTable == '') or not (selectedTable in tables):
+        selectedTable = tables[0]
 
-    tableName = request.args.get('tablesBox', '')
-    if (tableName == '') or not (tableName in tables):
-        tableName = tables[0]
-    metaClass = getattr(tablesMetadata, tableName.lower())
+    metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
-    #columns = getColums(cur, tableName)
-    columns = [i.name for i in meta]
-    columnName = request.args.get('columnsBox', '')
-    if (columnName == '') or not (columnName in columns):
-        columnName = columns[0]
-    searchName = request.args.get('searchInput', '')
+    queryBuilder = queryConstractor.queryBuilder()
+    queryBuilder.createSelect(selectedTable, meta)
 
-    queryBuilder = queryConstractor.queryBuilder(tableName, columnName, searchName, meta)
-    cur.execute(queryBuilder.query, (searchName, ))
+    columns = queryBuilder.columnsSearchString.split(',')
+    columnName = request.args.getlist('columnsBox')
+    for i in range(len(columnName)):
+        if (columnName[i] == '') or not (columnName[i] in columns):
+            columnName[i] = columns[0]
+
+    searchName = request.args.getlist('searchInput')
+    conditions = getConditionList()
+    selectedConditions = request.args.getlist('conditionsBox')
+    for i in range(len(selectedConditions)):
+        if selectedConditions[i] not in conditions:
+            selectedConditions[i] = conditions[0]
+
+    queryBuilder.addWhere(columnName, searchName, selectedConditions)
+
+    sortOrder = request.args.get("sortOrderBox", '')
+    if sortOrder not in columns:
+        sortOrder = columns[0]
+    queryBuilder.addSort(sortOrder)
+
+    cur.execute(queryBuilder.query, searchName )
     sqlAns = cur.fetchall()
 
-    tableElements = [[] for i in range(len(sqlAns) + 1)]
-    tableElements[0] = columns
-    for i in range(len(sqlAns)):
-        tableElements[i + 1] = [j for j in sqlAns[i]]
-    return render_template("page.html", tables = tables, columns = columns, selectedTable = tableName,
-                           selectedColumn = columnName, tableElements = tableElements)
+    columnsRealNames = [i.name for i in meta]
+
+    elementsInPageNumbers = getElementsInPageNumbers()
+    elementsInPage = request.args.get('elementsInPageBox', '')
+    if elementsInPage == '' or int(elementsInPage) < 1:
+        elementsInPage = 10
+    elementsInPage = int(elementsInPage)
+    pagesCount = len(sqlAns) // elementsInPage + 1
+
+    return render_template("page.html", tables = tables, columns = columns, searchName = searchName,
+                           selectedTable = selectedTable, selectedColumn = columnName,
+                           elementsInPage = str(elementsInPage), elementsInPageNumbers = elementsInPageNumbers,
+                           conditions = conditions, selectedConditions = selectedConditions,
+                           columnsRealNames = columnsRealNames, sortOrder = sortOrder,
+                           tableElements = sqlAns[selectedPage*elementsInPage:selectedPage*elementsInPage + elementsInPage],
+                           pagesCount = pagesCount)
 
 if __name__ == "__main__":
     app.run()
