@@ -39,7 +39,7 @@ def mainPage():
     app.add_template_global(modifyUrl)
     selectedPage = int(request.args.get('page', 0))
 
-    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF8')
+    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
     cur = dataBase.cursor()
 
     tables = getTables(cur)
@@ -50,7 +50,7 @@ def mainPage():
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
     queryBuilder = queryConstractor.queryBuilder()
-    queryBuilder.createSelect(selectedTable, meta)
+    queryBuilder.createSelectWithJoin(meta, selectedTable)
 
     columns = queryBuilder.columnsSearchString.split(',')
     columnName = request.args.getlist('columnsBox')
@@ -91,6 +91,46 @@ def mainPage():
                            columnsRealNames = columnsRealNames, sortOrder = sortOrder,
                            tableElements = sqlAns[selectedPage*elementsInPage:selectedPage*elementsInPage + elementsInPage],
                            pagesCount = pagesCount)
+
+@app.route("/requestPage/<selectedTable>/<int:selectedId>/")
+def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
+    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
+    cur = dataBase.cursor()
+    queryBuilder = queryConstractor.queryBuilder()
+    metaClass = getattr(tablesMetadata, selectedTable.lower())
+    meta = metaClass.getMeta(metaClass)
+    columnsNames = [i.columnName for i in meta]
+    columnsNames = columnsNames
+    inputData = request.args.getlist('dataInput')
+    if len(inputData) == 0:
+        queryBuilder.createSelect(selectedTable, meta)
+        queryBuilder.addWhere(["ID"], [selectedId], ["="])
+        cur.execute(queryBuilder.query, [str(selectedId)])
+        inputData = cur.fetchall()[0][1:]
+    else:
+        action = request.args.get('actionSelectBox', '')
+        if action == "Удалить":
+            queryBuilder.createDel(selectedTable, selectedId)
+            cur.execute(queryBuilder.query)
+        if action == "Изменить":
+            queryBuilder.createUpdate(selectedTable, selectedId, columnsNames[1:])
+            cur.execute(queryBuilder.query, inputData)
+    return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames)
+
+@app.route('/create/<selectedTable>')
+def createPage(selectedTable):
+    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
+    cur = dataBase.cursor()
+    queryBuilder = queryConstractor.queryBuilder()
+    metaClass = getattr(tablesMetadata, selectedTable.lower())
+    meta = metaClass.getMeta(metaClass)
+    columnsNames = [i.columnName for i in meta]
+    columnsNames = columnsNames
+    inputData = request.args.getlist('dataInput')
+    if len(inputData) !=0:
+        queryBuilder.createInsert(selectedTable, columnsNames)
+        cur.execute(queryBuilder.query, inputData)
+    return render_template("createPage.html", columnsNames = columnsNames[1:])
 
 if __name__ == "__main__":
     app.run()

@@ -55,15 +55,17 @@
       <option {% if j == elementsInPage %} selected {% endif %}>{{j}}</option>
     {% endfor %}
   </select>
+  Сортировка по
   <select name = "sortOrderBox">
     {% for i in columns %}
       <option {% if i == sortOrder %} selected {% endif %}>{{i}}</option>
     {% endfor %}
   </select>
+  <a href = '/create/{{selectedTable}}'>Добавить</a>
   <table>
     <tr>{% for i in columnsRealNames %}<th>{{i}}</th>{% endfor %}</tr>
   {% for i in tableElements %}
-    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}</tr>
+    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}<td><a href = "/requestPage/{{selectedTable}}/{{i[0]}}">Редактировать/удалить</a></td></tr>
   {% endfor %}
   </table>
   {% for i in range(pagesCount) %}

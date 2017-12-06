@@ -1,0 +1,14 @@
+<h1>Редактирование</h1>
+<form>
+    {% for i in range(columnsNames|length) %}
+        {{columnsNames[i]}}
+        <input name='dataInput' value={{inputData[i]}}>
+        <br>
+    {% endfor %}
+    <br>
+    <select name='actionSelectBox'>
+        <option>Удалить</option>
+        <option>Изменить</option>
+    </select>
+    <button>Подтвердить</button>
+</form>

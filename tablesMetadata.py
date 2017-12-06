@@ -59,7 +59,7 @@ class sched_items(TableMetadata):
     LESSON_ID = ReferenceField('LESSON_ID', 'Номер пары', 'LESSONS', 'ID', 'Name')
     SUBJECT_ID = ReferenceField('SUBJECT_ID', 'Название предмета', 'SUBJECTS', 'ID', 'Name')
     AUDIENCE_ID = ReferenceField('AUDIENCE_ID', 'Номер аудитории', 'AUDIENCES', 'ID', 'Name')
-    GROUP_ID = ReferenceField('GROUP_ID', 'Номер группы', 'GROUPS', 'ID', 'Name')
+    #GROUP_ID = ReferenceField('GROUP_ID', 'Номер группы', 'GROUPS', 'ID', 'Name')
     TEACHER_ID = ReferenceField('TEACHER_ID', 'Преподаватель', 'TEACHERS', 'ID', 'Name')
     TYPE_ID = ReferenceField('TYPE_ID', 'Тип занятия', 'LESSON_TYPES', 'ID', 'Name')
     WEEKDAY_ID = ReferenceField('WEEKDAY_ID', 'День недели', 'WEEKDAYS', 'ID', 'Name')
@@ -73,6 +73,7 @@ class subjects(TableMetadata):
 
 
 class subject_group(TableMetadata):
+    ID = Field('ID', 'ID')
     tableName = 'SUBJECT_GROUP'
     tableRealName = 'Предметы - Группы'
     SUBJECT_ID = ReferenceField('SUBJECT_ID', 'Название предмета', 'SUBJECTS', 'ID', 'Name')
@@ -80,6 +81,7 @@ class subject_group(TableMetadata):
 
 
 class subject_teacher(TableMetadata):
+    ID = Field('ID', 'ID')
     tableName = 'SUBJECT_TEACHER'
     tableRealName = 'Предметы - Преподователи'
     SUBJECT_ID = ReferenceField('SUBJECT_ID', 'Название предмета', 'SUBJECTS', 'ID', 'Name')
@@ -100,3 +102,17 @@ class weekdays(TableMetadata):
     NAME = Field('NAME', 'День недели')
     ORDER_NUMBER = Field('ORDER_NUMBER', 'Порядковый номер')
 
+class log_status(TableMetadata):
+    tableName = 'LOG_STATUS'
+    tableRealName = 'Действия'
+    ID = Field('ID', 'ID')
+    NAME = Field('NAME', 'Действие')
+
+class log(TableMetadata):
+    tableName = 'LOG'
+    tableRealName = 'Лог'
+    ID = Field('ID', 'ID')
+    TABLE_NAME = Field('TABLE_NAME', 'Таблица')
+    STATUS = ReferenceField('STATUS', 'Действие', 'LOG_STATUS', 'ID', 'NAME')
+    TABLE_PK = Field('TABLE_PK', 'TABLE_PK')
+    CHANGE_TIME = Field('CHANGE_TIME', 'Время обновления')

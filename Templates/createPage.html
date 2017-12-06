@@ -1,0 +1,10 @@
+<h1>Добавление</h1>
+<form>
+    {% for i in range(columnsNames|length) %}
+        {{columnsNames[i]}}
+        <input name='dataInput'>
+        <br>
+    {% endfor %}
+    <br>
+    <button type="submit">Добавить</button>
+</form>
