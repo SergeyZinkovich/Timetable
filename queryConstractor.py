@@ -32,7 +32,7 @@ class queryBuilder:
     def createInsert(self, tableName, columnsNames):
         self.query = "insert into " + tableName + " "
         self.query += "(" + ",".join(i for i in columnsNames) + ")\n"
-        self.query += "values (" + "none" + ",?" * (len(columnsNames) - 1)+")"
+        self.query += "values (" + "?" + ",?" * (len(columnsNames) - 1)+")"
 
     def createUpdate(self, tableName, id, columnsNames):
         self.query = "update " + tableName + "\n"

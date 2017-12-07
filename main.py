@@ -34,8 +34,10 @@ def getElementsInPageNumbers():
     return elementsInPageNumbers
 
 @app.route("/")
-def mainPage():
+@app.route("/<selectedTable>/")
+def mainPage(selectedTable = "WEEKDAYS"):
     global modifyUrl
+    global prevTable
     app.add_template_global(modifyUrl)
     selectedPage = int(request.args.get('page', 0))
 
@@ -43,7 +45,6 @@ def mainPage():
     cur = dataBase.cursor()
 
     tables = getTables(cur)
-    selectedTable = request.args.get('tablesBox', '')
     if (selectedTable == '') or not (selectedTable in tables):
         selectedTable = tables[0]
 
@@ -94,6 +95,7 @@ def mainPage():
 
 @app.route("/requestPage/<selectedTable>/<int:selectedId>/")
 def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
+    commited = 0
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
     cur = dataBase.cursor()
     queryBuilder = queryConstractor.queryBuilder()
@@ -112,13 +114,17 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
         if action == "Удалить":
             queryBuilder.createDel(selectedTable, selectedId)
             cur.execute(queryBuilder.query)
+            commited = 1
         if action == "Изменить":
-            queryBuilder.createUpdate(selectedTable, selectedId, columnsNames[1:])
+            queryBuilder.createUpdate(selectedTable, selectedId, columnsNames)
             cur.execute(queryBuilder.query, inputData)
-    return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames)
+            commited = 1
+        cur.transaction.commit()
+    return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:], commited = commited)
 
 @app.route('/create/<selectedTable>')
 def createPage(selectedTable):
+    commited = 0
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
     cur = dataBase.cursor()
     queryBuilder = queryConstractor.queryBuilder()
@@ -128,9 +134,11 @@ def createPage(selectedTable):
     columnsNames = columnsNames
     inputData = request.args.getlist('dataInput')
     if len(inputData) !=0:
-        queryBuilder.createInsert(selectedTable, columnsNames)
+        queryBuilder.createInsert(selectedTable, columnsNames[1:])
         cur.execute(queryBuilder.query, inputData)
-    return render_template("createPage.html", columnsNames = columnsNames[1:])
+        cur.transaction.commit()
+        commited = 1
+    return render_template("createPage.html", columnsNames = columnsNames[1:], inputData = inputData, commited = commited)
 
 if __name__ == "__main__":
     app.run()

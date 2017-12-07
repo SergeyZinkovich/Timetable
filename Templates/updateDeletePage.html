@@ -1,5 +1,6 @@
 <h1>Редактирование</h1>
 <form>
+    <script src="../../../static/js/jquery-3.2.1.min.js"></script>
     {% for i in range(columnsNames|length) %}
         {{columnsNames[i]}}
         <input name='dataInput' value={{inputData[i]}}>
@@ -10,5 +11,12 @@
         <option>Удалить</option>
         <option>Изменить</option>
     </select>
-    <button>Подтвердить</button>
+    <button type="submit">Подтвердить</button>
+    {% if commited == 1 %}
+    <script>
+    $(document).ready(function(){
+        window.close();
+       })
+    </script>
+    {% endif %}
 </form>

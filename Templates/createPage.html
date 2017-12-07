@@ -1,10 +1,18 @@
 <h1>Добавление</h1>
 <form>
+    <script src="../static/js/jquery-3.2.1.min.js"></script>
     {% for i in range(columnsNames|length) %}
         {{columnsNames[i]}}
-        <input name='dataInput'>
+        <input name='dataInput' value={{inputData[i]}}>
         <br>
     {% endfor %}
     <br>
     <button type="submit">Добавить</button>
+    {% if commited == 1 %}
+    <script>
+    $(document).ready(function(){
+        window.close();
+       })
+    </script>
+    {% endif %}
 </form>

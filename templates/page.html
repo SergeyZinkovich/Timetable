@@ -3,13 +3,12 @@
   <link rel="stylesheet" href="../static/css/tableStyle.css"> 
   <script src="../static/js/jquery-3.2.1.min.js"></script>
   Выбор таблицы
-  <select name="tablesBox">
     {% for i in tables %}
-      <option {% if i == selectedTable %} selected {% endif %}>{{i}}</option>
+      <a href='/{{i}}'>{{i}}</a>
     {% endfor %}
-  </select>
   {% block functions %}
   <script id="filterSource" type="text/html">
+    <conditionsTag id="conditionsTag">
     <select name="columnsBox">
       {% for j in columns %}
         <option {% if j == selectedColumn[i] %} selected {% endif %}>{{j}}</option>
@@ -22,6 +21,7 @@
     </select>
     <input name = 'searchInput' value= {{searchName[i]}}>
     <br>
+    </conditionsTag>
   </script>
   <script>
     function addFilter(){
@@ -29,8 +29,17 @@
       $("#pConditions").append(filter);
     }
   </script>
+  <script>
+    function deleteFilters() {
+      $('conditionsTag').each(function () {
+        $(this).remove();
+    });
+    $("#pConditions").append("<conditionsTag id = \"conditionsTag\"></conditionsTag>");
+    }
+  </script>
   {% endblock %}
   <p id = "pConditions"></p>
+   <conditionsTag id="conditionsTag">
   {% for i in range(selectedColumn|length) %}
   <select name="columnsBox">
     {% for j in columns %}
@@ -45,9 +54,10 @@
   <input name = 'searchInput' value={{searchName[i]}}>
   <br>
   {% endfor %}
+   </conditionsTag>
   <button type="button" onclick="addFilter()">Add Condition</button>
+  <button type="button" onclick="deleteFilters()">Удалить</button>
   <button>Search</button>
-  
   <h1>{{selectedTable}}</h1>
   Элементов на странице
   <select name = "elementsInPageBox">
@@ -61,11 +71,11 @@
       <option {% if i == sortOrder %} selected {% endif %}>{{i}}</option>
     {% endfor %}
   </select>
-  <a href = '/create/{{selectedTable}}'>Добавить</a>
+  <a href = '/create/{{selectedTable}}' target="_blank">Добавить запись</a>
   <table>
     <tr>{% for i in columnsRealNames %}<th>{{i}}</th>{% endfor %}</tr>
   {% for i in tableElements %}
-    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}<td><a href = "/requestPage/{{selectedTable}}/{{i[0]}}">Редактировать/удалить</a></td></tr>
+    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}<td><a href = "/requestPage/{{selectedTable}}/{{i[0]}}" target="_blank">Редактировать/удалить</a></td></tr>
   {% endfor %}
   </table>
   {% for i in range(pagesCount) %}
