@@ -1,0 +1,52 @@
+<h1>Расписание</h1>
+<form>
+    <link rel="stylesheet" href="../static/css/tableStyle.css">
+    X
+    <select name="XBox">
+        <option selected>{{selectedX}}</option>
+        {% for i in columnsNames %}
+        <option>{{i}}</option>
+        {% endfor %}
+    </select>
+    Y
+    <select name="YBox">
+        <option selected>{{selectedY}}</option>
+        {% for i in columnsNames %}
+        <option>{{i}}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Выбор</button>
+    <table>
+        <tr>
+            <th></th>
+            {% for i in tableElements.copy().popitem()[1].keys() %}
+            <th>{{i}}</th>
+            {% endfor %}
+        </tr>
+        {% for key, value in tableElements.items() %}
+        <tr>
+            <td>{{key}}</td>
+            {% for i in value.values() %}
+            <td>
+                <table>
+                    <tr>
+                    {% for j in columnsNames %}
+                    <th>{{j}}</th>
+                    {% endfor %}
+                    </tr>
+                    <tr>
+                        {% if not i is none %}
+                            {% for x in i %}
+                                {% for j in x %}
+                                <td>{{j}}</td>
+                                {% endfor %}
+                            {% endfor %}
+                        {% endif %}
+                    </tr>
+                </table>
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</form>

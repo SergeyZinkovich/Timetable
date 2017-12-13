@@ -10,12 +10,9 @@ from werkzeug.urls import url_encode
 app = Flask(__name__)
 
 def getTables(cur):
-    sqlRequest = """SELECT a.RDB$RELATION_NAME
-    FROM RDB$RELATIONS a
-    WHERE RDB$SYSTEM_FLAG = 0 AND RDB$RELATION_TYPE = 0"""
-    cur.execute(sqlRequest)
-    tables = cur.fetchall()
-    return [str(t[0]).strip() for t in tables]
+    tables = ['SCHED_ITEMS', 'AUDIENCES', 'SUBJECT_GROUP', 'GROUPS',
+              'LESSONS', 'LESSON_TYPES', 'SUBJECT_TEACHER', 'SUBJECTS', 'TEACHERS', 'WEEKDAYS']
+    return tables
 
 def modifyUrl(**newValue):
     args = request.args.copy()
@@ -32,6 +29,49 @@ def getConditionList():
 def getElementsInPageNumbers():
     elementsInPageNumbers = ['10', '25', '50']
     return elementsInPageNumbers
+
+@app.route("/timeTable/")
+def timeTablePage():
+    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
+    cur = dataBase.cursor()
+    queryBuilder = queryConstractor.queryBuilder()
+    metaClass = getattr(tablesMetadata, 'sched_items')
+    meta = metaClass.getMeta(metaClass)
+    columnsNames = [i.columnName for i in meta]
+    columnsRealNames = [i.name for i in meta]
+    queryBuilder.createSelectWithJoin(meta, 'sched_items')
+    tableElements = cur.execute(queryBuilder.query)
+    tableElements = [list(i) for i in tableElements]
+
+    selectedX = request.args.get('XBox', '')
+    if not selectedX in columnsNames:
+        selectedX = columnsNames[0]
+    selectedY = request.args.get('YBox', '')
+    if not selectedY in columnsNames:
+        selectedY = columnsNames[1]
+    selectedYName = selectedY
+    selectedXName = selectedX
+    selectedX = columnsNames.index(selectedX)
+    selectedY = columnsNames.index(selectedY)
+    columnsNames.remove(columnsNames[selectedX])
+    if selectedYName != selectedXName:
+        columnsNames.remove(columnsNames[selectedY])
+
+    scheduleTable = dict.fromkeys(i[selectedY] for i in tableElements)
+    for i in scheduleTable:
+        scheduleTable[i] = dict.fromkeys([j[selectedX] for j in tableElements])
+
+    for i in tableElements:
+        t = i.copy()
+        del t[max(selectedX, selectedY)]
+        if (selectedX != selectedY): del t[min(selectedX, selectedY)]
+        if scheduleTable[i[selectedY]][i[selectedX]] is None:
+            scheduleTable[i[selectedY]][i[selectedX]] = [t]
+        else:                                                                            #удаляет что то не то
+            scheduleTable[i[selectedY]][i[selectedX]].append(t)
+
+    return render_template("timeTable.html", columnsNames = columnsNames,
+                           selectedX = selectedXName, selectedY = selectedYName, tableElements = scheduleTable)
 
 @app.route("/")
 @app.route("/<selectedTable>/")
@@ -122,7 +162,7 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
         cur.transaction.commit()
     return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:], commited = commited)
 
-@app.route('/create/<selectedTable>')
+@app.route("/create/<selectedTable>")
 def createPage(selectedTable):
     commited = 0
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
@@ -131,7 +171,6 @@ def createPage(selectedTable):
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.columnName for i in meta]
-    columnsNames = columnsNames
     inputData = request.args.getlist('dataInput')
     if len(inputData) !=0:
         queryBuilder.createInsert(selectedTable, columnsNames[1:])
