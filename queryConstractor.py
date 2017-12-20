@@ -3,6 +3,7 @@ import tablesMetadata
 class queryBuilder:
     query = ''
     columnsSearchString = ''
+    args = []
 
     def createSelect(self, tableName, meta):
         self.columnsSearchString = ','.join(i.columnName for i in meta)
@@ -19,12 +20,15 @@ class queryBuilder:
 
     def addWhere(self, columnName, searchName, selectedConditions):
         k = 0
+        self.args = searchName[:]
         for i in range(len(searchName)):
             if k == 0:
-                self.query += " where " + columnName[i] + " " + selectedConditions[i] +" ? "
+                self.query += " where " + columnName[i] + " " + selectedConditions[i] + " ? "
                 k += 1
             else:
-                self.query += " and " + columnName[i] + " " + selectedConditions[i] +" ? "
+                self.query += " and " + columnName[i] + " " + selectedConditions[i] + " ? "
+            if selectedConditions[i] == "LIKE":
+                self.args[i] = '%' + self.args[i] + '%'
 
     def addSort(self, sortOrder):
         self.query += "order by " + sortOrder

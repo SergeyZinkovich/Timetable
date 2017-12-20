@@ -3,19 +3,27 @@
     <link rel="stylesheet" href="../static/css/tableStyle.css">
     X
     <select name="XBox">
-        <option selected>{{selectedX}}</option>
-        {% for i in columnsNames %}
-        <option>{{i}}</option>
+        {% for i in range(columnsNames|length) %}
+        <option value={{i}} {% if columnsNames[i] == selectedX %}selected{% endif %}>{{columnsNames[i]}}</option>
         {% endfor %}
     </select>
     Y
     <select name="YBox">
-        <option selected>{{selectedY}}</option>
-        {% for i in columnsNames %}
-        <option>{{i}}</option>
+        {% for i in range(columnsNames|length) %}
+        <option value={{i}} {% if columnsNames[i] == selectedY %}selected{% endif %}>{{columnsNames[i]}}</option>
         {% endfor %}
     </select>
-    <button type="submit">Выбор</button>
+    <input type="checkbox" name="showColumnsNamesCheckbox" value="false">Не показывать названия колонок
+    <br>
+    Не показывать колонки
+    <br>
+    {% for i in range(columnsNames|length) %}
+    {% if columnsNames[i] != selectedX and columnsNames[i] != selectedY %}
+    <input type="checkbox" name="hiddenColumnsBox" value={{i}} {% if columnsNames[i] not in showedColumns %}checked{% endif %}>{{columnsNames[i]}}
+    <br>
+    {% endif %}
+    {% endfor %}
+    <button type="submit">Показать</button>
     <table>
         <tr>
             <th></th>
@@ -28,12 +36,15 @@
             <td>{{key}}</td>
             {% for i in value.values() %}
             <td>
+                {% if i != None %}
                 <table>
+                    {% if showColumnsNames == 'true'%}
                     <tr>
-                    {% for j in columnsNames %}
+                    {% for j in showedColumns %}
                     <th>{{j}}</th>
                     {% endfor %}
                     </tr>
+                    {% endif %}
                     <tr>
                         {% if not i is none %}
                             {% for x in i %}
@@ -44,6 +55,7 @@
                         {% endif %}
                     </tr>
                 </table>
+                {% endif %}
             </td>
             {% endfor %}
         </tr>

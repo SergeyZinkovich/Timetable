@@ -21,7 +21,7 @@ class TableMetadata:
         self.tableName = tableName
 
     def getMeta(self):
-        return [val for attr, val in self.__dict__.items() if isinstance(val, Field) or isinstance(val, ReferenceField)]
+        return [val for val in self.__dict__.values() if isinstance(val, Field) or isinstance(val, ReferenceField)]
 
 class audiences(TableMetadata):
     tableName = 'AUDIENCES'

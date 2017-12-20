@@ -55,7 +55,7 @@
   <br>
   {% endfor %}
    </conditionsTag>
-  <button type="button" onclick="addFilter()">Add Condition</button>
+  <button type="button" onclick="addFilter()">Добавить</button>
   <button type="button" onclick="deleteFilters()">Удалить</button>
   <button>Search</button>
   <h1>{{selectedTable}}</h1>
@@ -79,6 +79,6 @@
   {% endfor %}
   </table>
   {% for i in range(pagesCount) %}
-  <button><a href = {{ modifyUrl(page = i) }}>{{i + 1}}</a></button>
+  <a href = {{ modifyUrl(page = i) }}>{{i + 1}}</a>
   {% endfor %}
 </form>	

@@ -44,34 +44,46 @@ def timeTablePage():
     tableElements = [list(i) for i in tableElements]
 
     selectedX = request.args.get('XBox', '')
-    if not selectedX in columnsNames:
-        selectedX = columnsNames[0]
+    if not selectedX in range(len(columnsNames)):
+        selectedX = 0
     selectedY = request.args.get('YBox', '')
-    if not selectedY in columnsNames:
-        selectedY = columnsNames[1]
-    selectedYName = selectedY
+    if not selectedY in range(len(columnsNames)):
+        selectedY = 1
+    '''selectedYName = selectedY
     selectedXName = selectedX
     selectedX = columnsNames.index(selectedX)
-    selectedY = columnsNames.index(selectedY)
-    columnsNames.remove(columnsNames[selectedX])
-    if selectedYName != selectedXName:
-        columnsNames.remove(columnsNames[selectedY])
+    selectedY = columnsNames.index(selectedY)'''
+    '''del(columnsNames[max(selectedX, selectedY)])
+    if selectedY != selectedX:
+        del (columnsNames[min(selectedX, selectedY)])'''
 
-    scheduleTable = dict.fromkeys(i[selectedY] for i in tableElements)
-    for i in scheduleTable:
-        scheduleTable[i] = dict.fromkeys([j[selectedX] for j in tableElements])
+    hiddenColumns = request.args.getlist('hiddenColumnsBox', int)
+    hiddenColumns.append(selectedX)
+    hiddenColumns.append(selectedY)
+    hiddenColumns = sorted(hiddenColumns, reverse = True)
+
+    showedColumns = columnsNames[:]                                          #убрать X и Y из "не показывать"
+    for i in hiddenColumns:                                                   #selected в "не показывать"
+        if columnsNames[i] in showedColumns:
+            showedColumns.remove(columnsNames[i])
+
+    tableDict = dict.fromkeys(i[selectedY] for i in tableElements)
+    for i in tableDict:
+        tableDict[i] = dict.fromkeys([j[selectedX] for j in tableElements])
 
     for i in tableElements:
-        t = i.copy()
-        del t[max(selectedX, selectedY)]
-        if (selectedX != selectedY): del t[min(selectedX, selectedY)]
-        if scheduleTable[i[selectedY]][i[selectedX]] is None:
-            scheduleTable[i[selectedY]][i[selectedX]] = [t]
-        else:                                                                            #удаляет что то не то
-            scheduleTable[i[selectedY]][i[selectedX]].append(t)
+        t = i[:]
+        del(t[hiddenColumns[0]])
+        for j in range(1, len(hiddenColumns)):
+            if hiddenColumns[j] != hiddenColumns[j - 1]:
+                del(t[hiddenColumns[j]])
+        tableDict[i[selectedY]][i[selectedX]] = [t]
 
-    return render_template("timeTable.html", columnsNames = columnsNames,
-                           selectedX = selectedXName, selectedY = selectedYName, tableElements = scheduleTable)
+    showColumnsNames = request.args.get('showColumnsNamesCheckbox', 'true')
+
+    return render_template("timeTable.html", columnsNames = columnsNames, showedColumns = showedColumns,
+                           selectedX = columnsNames[selectedX], selectedY = columnsNames[selectedY],
+                           tableElements = tableDict, showColumnsNames = showColumnsNames)
 
 @app.route("/")
 @app.route("/<selectedTable>/")
@@ -79,7 +91,7 @@ def mainPage(selectedTable = "WEEKDAYS"):
     global modifyUrl
     global prevTable
     app.add_template_global(modifyUrl)
-    selectedPage = int(request.args.get('page', 0))
+    selectedPage = int(request.args.get('page', 0, int))
 
     dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
     cur = dataBase.cursor()
@@ -113,7 +125,7 @@ def mainPage(selectedTable = "WEEKDAYS"):
         sortOrder = columns[0]
     queryBuilder.addSort(sortOrder)
 
-    cur.execute(queryBuilder.query, searchName )
+    cur.execute(queryBuilder.query, queryBuilder.args )
     sqlAns = cur.fetchall()
 
     columnsRealNames = [i.name for i in meta]
@@ -142,7 +154,6 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.columnName for i in meta]
-    columnsNames = columnsNames
     inputData = request.args.getlist('dataInput')
     if len(inputData) == 0:
         queryBuilder.createSelect(selectedTable, meta)
