@@ -138,16 +138,16 @@
                         {% if i %}
                             {% for x in i %}
                             {% if x == i[0] %}
-                            <tr draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[-1]}}">
+                            <tr draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[0]}}">
                                 {% else %}
-                            <tr class="hidden" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[-1]}}">
+                            <tr class="hidden" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[0]}}">
                             {% endif %}
                                 {% for j in range(x|length) %}
                                 {% if j in showedColumns %}
                                 <td >{{x[j]}}</td>
                                 {% endif %}
                                 {% endfor %}
-                                <td><a href="/updateDelete/SCHED_ITEMS/{{x[-1]}}" target="_blank">Редактировать/удалить</a></td>
+                                <td><a href="/updateDelete/SCHED_ITEMS/{{x[0]}}" target="_blank">Редактировать/удалить</a></td>
                             </tr>
                             {% endfor %}
                         {% endif %}

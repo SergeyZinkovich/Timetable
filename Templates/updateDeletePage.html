@@ -8,8 +8,8 @@
         {% endif %}
         {% if options[columnsNames[i]] != '' %}
             <select name='dataInput'>
-                {% for j in options[columnsNames[i]].values() %}
-                <option {% if j == inputData[i] %} selected {% endif %}>{{j}}</option>
+                {% for key, val in options[columnsNames[i]].items() %}
+                <option value={{key}} {% if key == inputData[i] %} selected {% endif %}>{{val}}</option>
                 {% endfor %}
             </select>
         {% endif %}

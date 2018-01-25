@@ -18,15 +18,3 @@ class optionsCreator:
             else:
                 self.pikerOptionsDict[i.columnName] = ''
                 self.pikerOptionsDictBack[i.columnName] = ''
-
-    def replaceInput(self, columnsNames, inputData):
-        for i in range(len(inputData)):
-            if self.pikerOptionsDictBack[columnsNames[i]] != '':
-                inputData[i] = self.pikerOptionsDictBack[columnsNames[i]][inputData[i]]
-                if inputData[i] != None:
-                    inputData[i] = str(inputData[i])
-
-    def replaceOutput(self, columnsNames, inputData):
-        for i in range(len(inputData)):
-            if (self.pikerOptionsDict[columnsNames[i]] != ''):
-                inputData[i] = self.pikerOptionsDict[columnsNames[i]][inputData[i]]

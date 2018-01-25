@@ -146,7 +146,6 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '',
     inputData = request.args.getlist('dataInput')
 
     optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
-    optionsCreator.replaceInput(columnsNames[1:], inputData)
 
     if (len(inputData) == 0) or (x != ''):
         queryBuilder.createSelect(selectedTable, meta)
@@ -154,16 +153,14 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '',
         cur.execute(queryBuilder.query, [str(selectedId)])
         inputData = cur.fetchall()[0][1:]
         inputData = list(inputData)
-        optionsCreator.replaceOutput(columnsNames[1:], inputData)
-    if ((x == "ID") and (xValue != inputData[0])) or ((y == "ID") and (yValue != inputData[0])):
+    if ((x == "ID") and (xValue != str(inputData[0]))) or ((y == "ID") and (yValue != str(inputData[0]))):
         return
     if x != '':
         for i in range(1, len(columnsNames)):
             if columnsNames[i] == x:
-                inputData[i - 1] = xValue
+                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[x][xValue]
             if columnsNames[i] == y:
-                inputData[i - 1] = yValue
-        optionsCreator.replaceInput(columnsNames[1:], inputData)
+                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[y][yValue]
     if (len(inputData) != 0) or (x != ''):
         action = request.args.get('actionSelectBox', '')
         if x != '':
@@ -175,7 +172,7 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '',
         if action == "Изменить":
             queryBuilder.createUpdate(selectedTable, selectedId, columnsNames)
             inputData.append(str(selectedId))
-            cur.execute(queryBuilder.query, inputData)
+            cur.execute(queryBuilder.query, [i if i != "None" else None for i in inputData])
             commited = 1
         cur.transaction.commit()
     return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:],
@@ -191,19 +188,18 @@ def createPage(selectedTable, x = '', xValue = '', y = '', yValue = ''):
     inputData = request.args.getlist('dataInput')
 
     optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
-    optionsCreator.replaceInput(columnsNames[1:], inputData)
 
     if len(inputData) !=0:
         queryBuilder.createInsert(selectedTable, columnsNames[1:])
-        cur.execute(queryBuilder.query, inputData)
+        cur.execute(queryBuilder.query, [i if i != "None" else None for i in inputData])
         cur.transaction.commit()
         commited = 1
     if len(inputData) == 0:
         for i in range(1, len(columnsNames) - 1):
             if columnsNames[i] == x:
-                inputData.append(xValue)
+                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[x][xValue]
             elif columnsNames[i] == y:
-                inputData.append(yValue)
+                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[y][yValue]
             else:
                 inputData.append('')
     return render_template("createPage.html", columnsNames = columnsNames[1:],
