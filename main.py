@@ -44,7 +44,7 @@ def timeTablePage():
     columnsNames = [i.columnName for i in meta]
     columnsRealNames = [i.name for i in meta]
     queryBuilder.createSelectWithJoin(meta, 'sched_items')
-    sercher = searchHelper.searcher()                                         # Вынести весь поиск в хэлпер
+    sercher = searchHelper.searcher()
     sercher.search(queryBuilder)
     tableElements = cur.execute(queryBuilder.query, sercher.searchName)
     tableElements = [list(i) for i in tableElements]
@@ -56,33 +56,21 @@ def timeTablePage():
     if not selectedY in range(len(columnsNames)):
         selectedY = 1
 
-    hiddenColumns = request.args.getlist('hiddenColumnsBox', int)
-    hiddenColumns.append(selectedX)
-    hiddenColumns.append(selectedY)
-    hiddenColumns = sorted(hiddenColumns, reverse=True)
-
-    showedColumns = columnsNames[:]
-    for i in hiddenColumns:
-        if columnsNames[i] in showedColumns:
-            showedColumns.remove(columnsNames[i])
-            columnsRealNames.remove(columnsRealNames[i])
+    showedColumns = request.args.getlist('showColumnsBox', int)
+    if not showedColumns:
+        showedColumns = columnsNames[:]
+        showedColumns.pop(max(selectedX, selectedY))
+        showedColumns.pop(min(selectedX, selectedY))
 
     tableDict = dict.fromkeys(i[selectedY] for i in tableElements)
     for i in tableDict:
         tableDict[i] = dict.fromkeys([j[selectedX] for j in tableElements])
 
     for i in tableElements:
-        t = i[:]
-        id = t[0]
-        del(t[hiddenColumns[0]])
-        for j in range(1, len(hiddenColumns)):
-            if hiddenColumns[j] != hiddenColumns[j - 1]:
-                del(t[hiddenColumns[j]])
-        t.append(id)
         if tableDict[i[selectedY]][i[selectedX]] == None:
-            tableDict[i[selectedY]][i[selectedX]] = [t]
+            tableDict[i[selectedY]][i[selectedX]] = [i]
         else:
-            tableDict[i[selectedY]][i[selectedX]].append(t)
+            tableDict[i[selectedY]][i[selectedX]].append(i)
 
     showColumnsNames = request.args.get('showColumnsNamesCheckbox', 'true')
 

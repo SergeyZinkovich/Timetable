@@ -53,7 +53,7 @@
     <br>
     {% for i in range(columnsNames|length) %}
     {% if columnsNames[i] != selectedX and columnsNames[i] != selectedY %}
-    <input type="checkbox" name="hiddenColumnsBox" value={{i}} {% if columnsNames[i] not in showedColumns %}checked{% endif %}>{{columnsNames[i]}}
+    <input type="checkbox" name="showColumnsBox" value={{i}} {% if i in showedColumns %}checked{% endif %}>{{columnsNames[i]}}
     <br>
     {% endif %}
     {% endfor %}
@@ -127,8 +127,10 @@
                 <table y="{{ykey}}" x="{{key}}">
                     {% if showColumnsNames == "true" %}
                     <tr>
-                        {% for j in columnsRealNames %}
-                        <th>{{j}}</th>
+                        {% for j in range(columnsRealNames|length) %}
+                        {% if j in showedColumns %}
+                        <th>{{columnsRealNames[j]}}</th>
+                        {% endif %}
                         {% endfor %}
                         <th><a href = '/create/SCHED_ITEMS/{{selectedX}}/{{ykey}}/{{selectedY}}/{{key}}' target="_blank">Добавить запись</a></th>
                     </tr>
@@ -140,8 +142,10 @@
                                 {% else %}
                             <tr class="hidden" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[-1]}}">
                             {% endif %}
-                                {% for j in range(x|length - 1) %}
+                                {% for j in range(x|length) %}
+                                {% if j in showedColumns %}
                                 <td >{{x[j]}}</td>
+                                {% endif %}
                                 {% endfor %}
                                 <td><a href="/updateDelete/SCHED_ITEMS/{{x[-1]}}" target="_blank">Редактировать/удалить</a></td>
                             </tr>
