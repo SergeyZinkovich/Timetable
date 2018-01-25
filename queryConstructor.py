@@ -41,11 +41,14 @@ class queryBuilder:
     def createUpdate(self, tableName, id, columnsNames):
         self.query = "update " + tableName + "\n"
         for i in range(1, len(columnsNames)):
-            self.query += "set " + columnsNames[i] + "= ?\n"
-        self.query += " where ID = " + str(id)
+            if i == 1:
+                self.query += "set " + columnsNames[i] + "= ?\n"
+            else:
+                self.query += ',' + columnsNames[i] + "= ?\n"
+        self.query += " where ID = ?"
 
     def createDel(self, tableName, id):
-        self.query = "delete from " + tableName + " where ID = " + str(id)
+        self.query = "delete from " + tableName + " where ID = ?"
 
     def getQuery(self):
         return self.query

@@ -75,7 +75,7 @@
   <table>
     <tr>{% for i in columnsRealNames %}<th>{{i}}</th>{% endfor %}</tr>
   {% for i in tableElements %}
-    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}<td><a href = "/requestPage/{{selectedTable}}/{{i[0]}}" target="_blank">Редактировать/удалить</a></td></tr>
+    <tr>{% for j in i %}<td>{{j}}</td>{% endfor %}<td><a href = "/updateDelete/{{selectedTable}}/{{i[0]}}" target="_blank">Редактировать/удалить</a></td></tr>
   {% endfor %}
   </table>
   {% for i in range(pagesCount) %}

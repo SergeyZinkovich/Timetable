@@ -3,7 +3,17 @@
     <script src="../static/js/jquery-3.2.1.min.js"></script>
     {% for i in range(columnsNames|length) %}
         {{columnsNames[i]}}
+        {% if options[columnsNames[i]] == '' %}
         <input name='dataInput' value={{inputData[i]}}>
+        {% endif %}
+        {% if options[columnsNames[i]] != '' %}
+            <select required name='dataInput'>
+                <option disabled selected></option>
+                {% for j in options[columnsNames[i]].values() %}
+                <option {% if j == inputData[i] %} selected {% endif %}>{{j}}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
         <br>
     {% endfor %}
     <br>

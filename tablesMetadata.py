@@ -59,7 +59,7 @@ class sched_items(TableMetadata):
     LESSON_ID = ReferenceField('LESSON_ID', 'Номер пары', 'LESSONS', 'ID', 'Name')
     SUBJECT_ID = ReferenceField('SUBJECT_ID', 'Название предмета', 'SUBJECTS', 'ID', 'Name')
     AUDIENCE_ID = ReferenceField('AUDIENCE_ID', 'Номер аудитории', 'AUDIENCES', 'ID', 'Name')
-    #GROUP_ID = ReferenceField('GROUP_ID', 'Номер группы', 'GROUPS', 'ID', 'Name')
+    GROUP_ID = ReferenceField('GROUP_ID', 'Номер группы', 'GROUPS', 'ID', 'Name')
     TEACHER_ID = ReferenceField('TEACHER_ID', 'Преподаватель', 'TEACHERS', 'ID', 'Name')
     TYPE_ID = ReferenceField('TYPE_ID', 'Тип занятия', 'LESSON_TYPES', 'ID', 'Name')
     WEEKDAY_ID = ReferenceField('WEEKDAY_ID', 'День недели', 'WEEKDAYS', 'ID', 'Name')

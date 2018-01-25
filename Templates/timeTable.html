@@ -1,6 +1,40 @@
 <h1>Расписание</h1>
 <form>
     <link rel="stylesheet" href="../static/css/tableStyle.css">
+    <link rel="stylesheet" href="../static/css/showHide.css">
+    <script src="../static/js/jquery-3.2.1.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('.showhide').click(function () {
+                objectsToHide = $(this).parent().children().children().children(".tohide");
+                objectsToShow = $(this).parent().children().children().children(".hidden");
+                if(objectsToShow.length !== 0) {
+                    $(this).text('Hide');
+                    objectsToShow.removeClass('hidden');
+                    objectsToShow.addClass('tohide');
+                }
+                else {
+                    $(this).text('Show');
+                    objectsToHide.addClass('hidden');
+                }
+            });
+        });
+    </script>
+        <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+        function drag(ev) {
+            ev.dataTransfer.setData("id", ev.target.id);
+        }
+        function drop(ev) {
+            ev.preventDefault();
+            var data = ev.dataTransfer.getData("id");
+            href = "/updateDelete/SCHED_ITEMS/"+data+"/{{selectedX}}/"+ev.target.parentElement.parentElement.parentElement.getAttribute('y')+
+                "/{{selectedY}}/"+ev.target.parentElement.parentElement.parentElement.getAttribute('x')+"/";
+            $.ajax(href, complete = location.reload());
+        }
+    </script>
     X
     <select name="XBox">
         {% for i in range(columnsNames|length) %}
@@ -13,7 +47,7 @@
         <option value={{i}} {% if columnsNames[i] == selectedY %}selected{% endif %}>{{columnsNames[i]}}</option>
         {% endfor %}
     </select>
-    <input type="checkbox" name="showColumnsNamesCheckbox" value="false">Не показывать названия колонок
+    <input type="checkbox" name="showColumnsNamesCheckbox" value="false" {% if showColumnsNames == "false" %} checked {% endif %}>Не показывать названия колонок
     <br>
     Не показывать колонки
     <br>
@@ -23,37 +57,104 @@
     <br>
     {% endif %}
     {% endfor %}
+    {% block functions %}
+  <script id="filterSource" type="text/html">
+    <conditionsTag id="conditionsTag">
+    <select name="columnsBox">
+      {% for j in columnsNames %}
+        <option {% if j == selectedColumn[i] %} selected {% endif %}>{{j}}</option>
+      {% endfor %}
+    </select>
+    <select name="conditionsBox">
+    {% for j in conditions%}
+      <option {% if j == selectedConditions[i] %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+    </select>
+    <input name = 'searchInput' value= {{searchName[i]}}>
+    <br>
+    </conditionsTag>
+  </script>
+  <script>
+    function addFilter(){
+      var filter = document.getElementById('filterSource').innerHTML;
+      $("#pConditions").append(filter);
+    }
+  </script>
+  <script>
+    function deleteFilters() {
+      $('conditionsTag').each(function () {
+        $(this).remove();
+    });
+    $("#pConditions").append("<conditionsTag id = \"conditionsTag\"></conditionsTag>");
+    }
+  </script>
+  {% endblock %}
+  <p id = "pConditions"></p>
+   <conditionsTag id="conditionsTag">
+  {% for i in range(selectedColumn|length) %}
+  <select name="columnsBox">
+    {% for j in columnsNames %}
+      <option {% if j == selectedColumn[i] %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+  </select>
+  <select name="conditionsBox">
+    {% for j in conditions %}
+      <option {% if j == selectedConditions[i] %} selected {% endif %}>{{j}}</option>
+    {% endfor %}
+  </select>
+  <input name = 'searchInput' value={{searchName[i]}}>
+  <br>
+  {% endfor %}
+   </conditionsTag>
+  <button type="button" onclick="addFilter()">Добавить</button>
+  <button type="button" onclick="deleteFilters()">Удалить</button>
     <button type="submit">Показать</button>
     <table>
+        {% for key, value in tableElements.items() %}
+        {% if not loop.index0 %}
         <tr>
             <th></th>
-            {% for i in tableElements.copy().popitem()[1].keys() %}
-            <th>{{i}}</th>
+            {% for k in value.keys() %}
+            <th>{{k}}</th>
             {% endfor %}
         </tr>
-        {% for key, value in tableElements.items() %}
+        {% endif %}
         <tr>
             <td>{{key}}</td>
-            {% for i in value.values() %}
+            {% for ykey, i in value.items() %}
             <td>
-                {% if i != None %}
-                <table>
-                    {% if showColumnsNames == 'true'%}
+                {% if i %}
+                <table y="{{ykey}}" x="{{key}}">
+                    {% if showColumnsNames == "true" %}
                     <tr>
-                    {% for j in showedColumns %}
-                    <th>{{j}}</th>
-                    {% endfor %}
+                        {% for j in columnsRealNames %}
+                        <th>{{j}}</th>
+                        {% endfor %}
+                        <th><a href = '/create/SCHED_ITEMS/{{selectedX}}/{{ykey}}/{{selectedY}}/{{key}}' target="_blank">Добавить запись</a></th>
                     </tr>
                     {% endif %}
-                    <tr>
-                        {% if not i is none %}
+                        {% if i %}
                             {% for x in i %}
-                                {% for j in x %}
-                                <td>{{j}}</td>
+                            {% if x == i[0] %}
+                            <tr draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[-1]}}">
+                                {% else %}
+                            <tr class="hidden" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)" id="{{x[-1]}}">
+                            {% endif %}
+                                {% for j in range(x|length - 1) %}
+                                <td >{{x[j]}}</td>
                                 {% endfor %}
+                                <td><a href="/updateDelete/SCHED_ITEMS/{{x[-1]}}" target="_blank">Редактировать/удалить</a></td>
+                            </tr>
                             {% endfor %}
                         {% endif %}
-                    </tr>
+                </table>
+                <br>
+                {% if i|length > 1 %}
+                <button type="button" class="showhide">Show</button>
+                {% endif %}
+                {% else %}
+                <table>
+                    <tr ondragover="allowDrop(event)" ondrop="drop(event)"><td> </td></tr>
                 </table>
                 {% endif %}
             </td>

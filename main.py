@@ -1,9 +1,12 @@
 from builtins import len
 
+import optionsCreatHelper
 import fdb
 import tablesMetadata
-import queryConstractor
+import queryConstructor
+import searchHelper
 from flask import Flask
+from flask import url_for
 from flask import request
 from flask import render_template
 from werkzeug.urls import url_encode
@@ -11,7 +14,7 @@ app = Flask(__name__)
 
 def getTables(cur):
     tables = ['SCHED_ITEMS', 'AUDIENCES', 'SUBJECT_GROUP', 'GROUPS',
-              'LESSONS', 'LESSON_TYPES', 'SUBJECT_TEACHER', 'SUBJECTS', 'TEACHERS', 'WEEKDAYS']
+              'LESSONS', 'LESSON_TYPES', 'SUBJECT_TEACHER', 'SUBJECTS', 'TEACHERS', 'WEEKDAYS', 'GROUPS']
     return tables
 
 def modifyUrl(**newValue):
@@ -30,42 +33,39 @@ def getElementsInPageNumbers():
     elementsInPageNumbers = ['10', '25', '50']
     return elementsInPageNumbers
 
+dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
+cur = dataBase.cursor()
+queryBuilder = queryConstructor.queryBuilder()
+
 @app.route("/timeTable/")
 def timeTablePage():
-    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
-    cur = dataBase.cursor()
-    queryBuilder = queryConstractor.queryBuilder()
     metaClass = getattr(tablesMetadata, 'sched_items')
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.columnName for i in meta]
     columnsRealNames = [i.name for i in meta]
     queryBuilder.createSelectWithJoin(meta, 'sched_items')
-    tableElements = cur.execute(queryBuilder.query)
+    sercher = searchHelper.searcher()                                         # Вынести весь поиск в хэлпер
+    sercher.search(queryBuilder)
+    tableElements = cur.execute(queryBuilder.query, sercher.searchName)
     tableElements = [list(i) for i in tableElements]
 
-    selectedX = request.args.get('XBox', '')
+    selectedX = int(request.args.get('XBox', 0))
     if not selectedX in range(len(columnsNames)):
         selectedX = 0
-    selectedY = request.args.get('YBox', '')
+    selectedY = int(request.args.get('YBox', 1))
     if not selectedY in range(len(columnsNames)):
         selectedY = 1
-    '''selectedYName = selectedY
-    selectedXName = selectedX
-    selectedX = columnsNames.index(selectedX)
-    selectedY = columnsNames.index(selectedY)'''
-    '''del(columnsNames[max(selectedX, selectedY)])
-    if selectedY != selectedX:
-        del (columnsNames[min(selectedX, selectedY)])'''
 
     hiddenColumns = request.args.getlist('hiddenColumnsBox', int)
     hiddenColumns.append(selectedX)
     hiddenColumns.append(selectedY)
-    hiddenColumns = sorted(hiddenColumns, reverse = True)
+    hiddenColumns = sorted(hiddenColumns, reverse=True)
 
-    showedColumns = columnsNames[:]                                          #убрать X и Y из "не показывать"
-    for i in hiddenColumns:                                                   #selected в "не показывать"
+    showedColumns = columnsNames[:]
+    for i in hiddenColumns:
         if columnsNames[i] in showedColumns:
             showedColumns.remove(columnsNames[i])
+            columnsRealNames.remove(columnsRealNames[i])
 
     tableDict = dict.fromkeys(i[selectedY] for i in tableElements)
     for i in tableDict:
@@ -73,17 +73,24 @@ def timeTablePage():
 
     for i in tableElements:
         t = i[:]
+        id = t[0]
         del(t[hiddenColumns[0]])
         for j in range(1, len(hiddenColumns)):
             if hiddenColumns[j] != hiddenColumns[j - 1]:
                 del(t[hiddenColumns[j]])
-        tableDict[i[selectedY]][i[selectedX]] = [t]
+        t.append(id)
+        if tableDict[i[selectedY]][i[selectedX]] == None:
+            tableDict[i[selectedY]][i[selectedX]] = [t]
+        else:
+            tableDict[i[selectedY]][i[selectedX]].append(t)
 
     showColumnsNames = request.args.get('showColumnsNamesCheckbox', 'true')
 
     return render_template("timeTable.html", columnsNames = columnsNames, showedColumns = showedColumns,
                            selectedX = columnsNames[selectedX], selectedY = columnsNames[selectedY],
-                           tableElements = tableDict, showColumnsNames = showColumnsNames)
+                           tableElements = tableDict, showColumnsNames = showColumnsNames, columnsRealNames = columnsRealNames,
+                           searchName = sercher.searchName, selectedConditions = sercher.selectedConditions, conditions = getConditionList(),
+                           selectedColumn = sercher.selectedColumns)
 
 @app.route("/")
 @app.route("/<selectedTable>/")
@@ -93,16 +100,12 @@ def mainPage(selectedTable = "WEEKDAYS"):
     app.add_template_global(modifyUrl)
     selectedPage = int(request.args.get('page', 0, int))
 
-    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
-    cur = dataBase.cursor()
-
     tables = getTables(cur)
     if (selectedTable == '') or not (selectedTable in tables):
         selectedTable = tables[0]
 
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
-    queryBuilder = queryConstractor.queryBuilder()
     queryBuilder.createSelectWithJoin(meta, selectedTable)
 
     columns = queryBuilder.columnsSearchString.split(',')
@@ -145,50 +148,78 @@ def mainPage(selectedTable = "WEEKDAYS"):
                            tableElements = sqlAns[selectedPage*elementsInPage:selectedPage*elementsInPage + elementsInPage],
                            pagesCount = pagesCount)
 
-@app.route("/requestPage/<selectedTable>/<int:selectedId>/")
-def requestPage(selectedTable = "WEEKDAYS", selectedId = 1):
+@app.route("/updateDelete/<selectedTable>/<int:selectedId>/")
+@app.route("/updateDelete/<selectedTable>/<int:selectedId>/<x>/<xValue>/<y>/<yValue>/")
+def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '', y = '', yValue = ''):
     commited = 0
-    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
-    cur = dataBase.cursor()
-    queryBuilder = queryConstractor.queryBuilder()
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.columnName for i in meta]
     inputData = request.args.getlist('dataInput')
-    if len(inputData) == 0:
+
+    optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
+    optionsCreator.replaceInput(columnsNames[1:], inputData)
+
+    if (len(inputData) == 0) or (x != ''):
         queryBuilder.createSelect(selectedTable, meta)
         queryBuilder.addWhere(["ID"], [selectedId], ["="])
         cur.execute(queryBuilder.query, [str(selectedId)])
         inputData = cur.fetchall()[0][1:]
-    else:
+        inputData = list(inputData)
+        optionsCreator.replaceOutput(columnsNames[1:], inputData)
+    if ((x == "ID") and (xValue != inputData[0])) or ((y == "ID") and (yValue != inputData[0])):
+        return
+    if x != '':
+        for i in range(1, len(columnsNames)):
+            if columnsNames[i] == x:
+                inputData[i - 1] = xValue
+            if columnsNames[i] == y:
+                inputData[i - 1] = yValue
+        optionsCreator.replaceInput(columnsNames[1:], inputData)
+    if (len(inputData) != 0) or (x != ''):
         action = request.args.get('actionSelectBox', '')
+        if x != '':
+            action = "Изменить"
         if action == "Удалить":
             queryBuilder.createDel(selectedTable, selectedId)
-            cur.execute(queryBuilder.query)
+            cur.execute(queryBuilder.query, [str(selectedId)])
             commited = 1
         if action == "Изменить":
             queryBuilder.createUpdate(selectedTable, selectedId, columnsNames)
+            inputData.append(str(selectedId))
             cur.execute(queryBuilder.query, inputData)
             commited = 1
         cur.transaction.commit()
-    return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:], commited = commited)
+    return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:],
+                           commited = commited, options = optionsCreator.pikerOptionsDict)
 
 @app.route("/create/<selectedTable>")
-def createPage(selectedTable):
+@app.route("/create/<selectedTable>/<x>/<xValue>/<y>/<yValue>/")
+def createPage(selectedTable, x = '', xValue = '', y = '', yValue = ''):
     commited = 0
-    dataBase = fdb.connect(dsn='TIMETABLE.FDB', user='SYSDBA', password='masterkey', charset='UTF-8')
-    cur = dataBase.cursor()
-    queryBuilder = queryConstractor.queryBuilder()
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.columnName for i in meta]
     inputData = request.args.getlist('dataInput')
+
+    optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
+    optionsCreator.replaceInput(columnsNames[1:], inputData)
+
     if len(inputData) !=0:
         queryBuilder.createInsert(selectedTable, columnsNames[1:])
         cur.execute(queryBuilder.query, inputData)
         cur.transaction.commit()
         commited = 1
-    return render_template("createPage.html", columnsNames = columnsNames[1:], inputData = inputData, commited = commited)
+    if len(inputData) == 0:
+        for i in range(1, len(columnsNames) - 1):
+            if columnsNames[i] == x:
+                inputData.append(xValue)
+            elif columnsNames[i] == y:
+                inputData.append(yValue)
+            else:
+                inputData.append('')
+    return render_template("createPage.html", columnsNames = columnsNames[1:],
+                           inputData = inputData, commited = commited, options = optionsCreator.pikerOptionsDict)
 
 if __name__ == "__main__":
     app.run()
