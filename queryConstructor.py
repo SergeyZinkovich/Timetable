@@ -13,6 +13,9 @@ class queryBuilder:
         self.columnsSearchString = ','.join(i.getColumns(tableName) for i in meta)
         self.query = "select " + self.columnsSearchString +" from " + tableName + " "
         # self.joins = ''.join(i.getJoin for i in meta)
+        self.addJoins(tableName, meta)
+
+    def addJoins(self, tableName, meta):
         for i in meta:
             if isinstance(i, tablesMetadata.ReferenceField):
                 self.query += "left join " + i.joinTableName + " on " + \
@@ -50,5 +53,11 @@ class queryBuilder:
     def createDel(self, tableName, id):
         self.query = "delete from " + tableName + " where ID = ?"
 
-    def getQuery(self):
-        return self.query
+    def getConflicts(self, conflictId, meta):
+        self.query = '''Select c.CONFLICT_GROUP_ID, ''' + ','.join(i.getColumns("SCHED_ITEMS") for i in meta) + '''  from CONFLICTS c 
+                        inner join SCHED_ITEMS on c.ELEMENT_ID = SCHED_ITEMS.ID\n'''
+        self.addJoins("SCHED_ITEMS", meta)
+        self.addConflictsWhere(conflictId)
+
+    def addConflictsWhere(self, conflictId):
+        self.query +=  "where c.CONFLICT_ID = " + str(conflictId)

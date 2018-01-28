@@ -5,6 +5,7 @@ import fdb
 import tablesMetadata
 import queryConstructor
 import searchHelper
+import conflictsModul
 from flask import Flask
 from flask import url_for
 from flask import request
@@ -16,6 +17,9 @@ def getTables(cur):
     tables = ['SCHED_ITEMS', 'AUDIENCES', 'SUBJECT_GROUP', 'GROUPS',
               'LESSONS', 'LESSON_TYPES', 'SUBJECT_TEACHER', 'SUBJECTS', 'TEACHERS', 'WEEKDAYS', 'GROUPS']
     return tables
+
+def getConflictsTypesNames():
+    return ["Одинаковые аудитории", "Разрыв преподавателя", "Разрыв группы"]
 
 def modifyUrl(**newValue):
     args = request.args.copy()
@@ -136,9 +140,9 @@ def mainPage(selectedTable = "WEEKDAYS"):
                            tableElements = sqlAns[selectedPage*elementsInPage:selectedPage*elementsInPage + elementsInPage],
                            pagesCount = pagesCount)
 
+#пользовательское изменение/удаление
 @app.route("/updateDelete/<selectedTable>/<int:selectedId>/")
-@app.route("/updateDelete/<selectedTable>/<int:selectedId>/<x>/<xValue>/<y>/<yValue>/")
-def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '', y = '', yValue = ''):
+def updateDeletePage(selectedTable = "WEEKDAYS", selectedId = 1):
     commited = 0
     metaClass = getattr(tablesMetadata, selectedTable.lower())
     meta = metaClass.getMeta(metaClass)
@@ -147,24 +151,14 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '',
 
     optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
 
-    if (len(inputData) == 0) or (x != ''):
+    if len(inputData) == 0:
         queryBuilder.createSelect(selectedTable, meta)
         queryBuilder.addWhere(["ID"], [selectedId], ["="])
         cur.execute(queryBuilder.query, [str(selectedId)])
         inputData = cur.fetchall()[0][1:]
         inputData = list(inputData)
-    if ((x == "ID") and (xValue != str(inputData[0]))) or ((y == "ID") and (yValue != str(inputData[0]))):
-        return
-    if x != '':
-        for i in range(1, len(columnsNames)):
-            if columnsNames[i] == x:
-                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[x][xValue]
-            if columnsNames[i] == y:
-                inputData[i - 1] = optionsCreator.pikerOptionsDictBack[y][yValue]
-    if (len(inputData) != 0) or (x != ''):
+    if len(inputData) != 0:
         action = request.args.get('actionSelectBox', '')
-        if x != '':
-            action = "Изменить"
         if action == "Удалить":
             queryBuilder.createDel(selectedTable, selectedId)
             cur.execute(queryBuilder.query, [str(selectedId)])
@@ -177,6 +171,33 @@ def requestPage(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '',
         cur.transaction.commit()
     return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:],
                            commited = commited, options = optionsCreator.pikerOptionsDict)
+
+#программное изменение
+@app.route("/updateDelete/<selectedTable>/<int:selectedId>/<x>/<xValue>/<y>/<yValue>/")
+def programUpdate(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '', y = '', yValue = ''):
+    metaClass = getattr(tablesMetadata, selectedTable.lower())
+    meta = metaClass.getMeta(metaClass)
+    columnsNames = [i.columnName for i in meta]
+
+    optionsCreator = optionsCreatHelper.optionsCreator(meta, cur)
+
+    queryBuilder.createSelect(selectedTable, meta)
+    queryBuilder.addWhere(["ID"], [selectedId], ["="])
+    cur.execute(queryBuilder.query, [str(selectedId)])
+    inputData = cur.fetchall()[0][1:]
+    inputData = list(inputData)
+    if ((x == "ID") and (xValue != str(inputData[0]))) or ((y == "ID") and (yValue != str(inputData[0]))):
+        return
+    for i in range(1, len(columnsNames)):
+        if columnsNames[i] == x:
+            inputData[i - 1] = optionsCreator.pikerOptionsDictBack[x][xValue]
+        if columnsNames[i] == y:
+            inputData[i - 1] = optionsCreator.pikerOptionsDictBack[y][yValue]
+    queryBuilder.createUpdate(selectedTable, selectedId, columnsNames)
+    inputData.append(str(selectedId))
+    cur.execute(queryBuilder.query, [i if i != "None" else None for i in inputData])
+    cur.transaction.commit()
+    return "succes"
 
 @app.route("/create/<selectedTable>")
 @app.route("/create/<selectedTable>/<x>/<xValue>/<y>/<yValue>/")
@@ -204,6 +225,22 @@ def createPage(selectedTable, x = '', xValue = '', y = '', yValue = ''):
                 inputData.append('')
     return render_template("createPage.html", columnsNames = columnsNames[1:],
                            inputData = inputData, commited = commited, options = optionsCreator.pikerOptionsDict)
+
+@app.route("/conflicts/<int:conflictId>")
+@app.route("/conflicts")
+def conflictsPage(conflictId = 0):
+    if not conflictId in range(3):
+        conflictId = 0
+    conflictsModul.createAllConflicts(cur)
+    metaClass = getattr(tablesMetadata, 'sched_items')
+    meta = metaClass.getMeta(metaClass)
+    columnsNames = [i.name for i in meta]
+    queryBuilder.getConflicts(conflictId, meta)
+    cur.execute(queryBuilder.query)
+    sqlAns = cur.fetchall()
+
+    return render_template("conflictsPage.html", conflictsTypesNames = getConflictsTypesNames(),
+                           conflictId = conflictId, columnsNames = columnsNames, tableElements = sqlAns )
 
 if __name__ == "__main__":
     app.run()

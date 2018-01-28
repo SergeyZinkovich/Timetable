@@ -1,0 +1,35 @@
+
+<form>
+    <link rel="stylesheet" href="../static/css/tableStyle.css">
+    <h1>
+    {% for i in range(conflictsTypesNames|length) %}
+        <a href="/conflicts/{{i}}">{{conflictsTypesNames[i]}}</a>
+    {% endfor %}
+    </h1>
+    <h1>{{conflictsTypesNames[conflictId]}}</h1>
+    <table>
+        <tr>
+        {% for i in columnsNames %}
+        <th>{{i}}</th>
+        {% endfor %}
+        </tr>
+    {% for i in range(tableElements|length) %}
+        {% if i > 0 %}
+        {% if tableElements[i][0] != tableElements[i - 1][0] %}
+        </table><br><br>
+        <table>
+            <tr>
+            {% for j in columnsNames %}
+            <th>{{j}}</th>
+            {% endfor %}
+            </tr>
+        {% endif %}
+            {% endif %}
+        <tr>
+        {% for j in tableElements[i][1:] %}
+            <td>{{j}}</td>
+        {% endfor %}
+        </tr>
+    {% endfor %}
+    </table>
+</form>
