@@ -1,5 +1,6 @@
 
 <form>
+    <a href="/">Таблицы</a>  <a href="/timeTable">Аналитика</a>  <a href="/conflicts">Конфликты</a><br>
     <link rel="stylesheet" href="../static/css/tableStyle.css">
     <h1>
     {% for i in range(conflictsTypesNames|length) %}
@@ -9,9 +10,10 @@
     <h1>{{conflictsTypesNames[conflictId]}}</h1>
     <table>
         <tr>
-        {% for i in columnsNames %}
-        <th>{{i}}</th>
-        {% endfor %}
+            {% for i in columnsNames %}
+            <th>{{i}}</th>
+            {% endfor %}
+            <th></th>
         </tr>
     {% for i in range(tableElements|length) %}
         {% if i > 0 %}
@@ -19,16 +21,18 @@
         </table><br><br>
         <table>
             <tr>
-            {% for j in columnsNames %}
-            <th>{{j}}</th>
-            {% endfor %}
-            </tr>
+                {% for j in columnsNames %}
+                <th>{{j}}</th>
+                {% endfor %}
+                <th></th>
+                </tr>
         {% endif %}
             {% endif %}
         <tr>
-        {% for j in tableElements[i][1:] %}
+            {% for j in tableElements[i][1:] %}
             <td>{{j}}</td>
-        {% endfor %}
+            {% endfor %}
+            <td><a href="/updateDelete/SCHED_ITEMS/{{tableElements[i][1]}}" target="_blank">Редактировать/удалить</a></td>
         </tr>
     {% endfor %}
     </table>

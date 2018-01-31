@@ -62,7 +62,7 @@ def timeTablePage():
 
     showedColumns = request.args.getlist('showColumnsBox', int)
     if not showedColumns:
-        showedColumns = columnsNames[:]
+        showedColumns = [i for i in range(len(columnsNames))]
         showedColumns.pop(max(selectedX, selectedY))
         showedColumns.pop(min(selectedX, selectedY))
 
@@ -162,11 +162,13 @@ def updateDeletePage(selectedTable = "WEEKDAYS", selectedId = 1):
         if action == "Удалить":
             queryBuilder.createDel(selectedTable, selectedId)
             cur.execute(queryBuilder.query, [str(selectedId)])
+            conflictsModul.createAllConflicts(cur)
             commited = 1
         if action == "Изменить":
             queryBuilder.createUpdate(selectedTable, selectedId, columnsNames)
             inputData.append(str(selectedId))
             cur.execute(queryBuilder.query, [i if i != "None" else None for i in inputData])
+            conflictsModul.createAllConflicts(cur)
             commited = 1
         cur.transaction.commit()
     return render_template("updateDeletePage.html", inputData = inputData, columnsNames = columnsNames[1:],
@@ -197,6 +199,7 @@ def programUpdate(selectedTable = "WEEKDAYS", selectedId = 1, x = '', xValue = '
     inputData.append(str(selectedId))
     cur.execute(queryBuilder.query, [i if i != "None" else None for i in inputData])
     cur.transaction.commit()
+    conflictsModul.createAllConflicts(cur)
     return "succes"
 
 @app.route("/create/<selectedTable>")
@@ -231,7 +234,6 @@ def createPage(selectedTable, x = '', xValue = '', y = '', yValue = ''):
 def conflictsPage(conflictId = 0):
     if not conflictId in range(3):
         conflictId = 0
-    conflictsModul.createAllConflicts(cur)
     metaClass = getattr(tablesMetadata, 'sched_items')
     meta = metaClass.getMeta(metaClass)
     columnsNames = [i.name for i in meta]
